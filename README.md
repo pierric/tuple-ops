@@ -13,7 +13,7 @@ operations on n-ary tuples by manipulating via GHC.Generics. Current only uncons
 ```
 
 ```
-uncons (True,'a', "S")
+> uncons (True,'a', "S")
 (True,('a',"S"))
 ```
 
