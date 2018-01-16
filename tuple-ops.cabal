@@ -3,6 +3,7 @@ version:                    0.0.0.0
 category:                   Data
 author:                     Jiasen Wu
 maintainer:                 Jiasen Wu <jiasenwu@hotmail.com>
+homepage:                   https://github.com/pierric/tuple-ops
 synopsis:                   various operations on n-ary tuples via GHC.Generics
 description:                Uncons operation on n-ary tuples
 license:                    BSD3
