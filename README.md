@@ -44,6 +44,8 @@ generates a function that returns `(Int, MXUInt, Ptr MXUInt, Ptr (Ptr MXUInt), M
 MXUInt, Ptr MXUInt, Ptr (Ptr MXUInt), Int)`, in which the first element is return code. By `uncons` it, we can extract the
 return code, throwing an exception when an error is indicated, and return the rest part as result.
 
+`uncons` also fits  a function returning a return-code only. In this case, `()` is the result after extraction.
+
 ## limits
 only tuple of size up to 16 is supported.
 
