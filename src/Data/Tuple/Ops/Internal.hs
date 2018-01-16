@@ -1,3 +1,17 @@
+------------------------------------------------------------
+-- |
+-- Module      :  Data.Tuple.Ops.Internal
+-- Description :  various operations on n-ary tuples via GHC.Generics
+-- Copyright   :  (c) 2018 Jiasen Wu
+-- License     :  BSD-style (see the file LICENSE)
+-- Maintainer  :  Jiasen Wu <jiasenwu@hotmail.com>
+-- Stability   :  experimental
+-- Portability :  portable
+--
+--
+-- This module defins operations to manipulate the generic 
+-- representation of tuple.
+------------------------------------------------------------
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -48,6 +62,7 @@ instance (Linearize v b, Linearize u (L v b)) => Linearize (u :*: v) b where
 type family Length a :: Nat where
     Length (S1 MetaS (Rec0 t)) = 1
     Length (a :*: b) = Length a + Length b
+-- | calculate the number of fields of a product
 length :: a x -> Proxy (Length a)
 length _ = Proxy
 
@@ -56,15 +71,18 @@ type family Half (a :: Nat) :: Nat where
     Half 1 = 0
     Half 2 = 1
     Half n = Half (n - 2) + 1
+-- | calculate the half
 half :: KnownNat n => Proxy n -> Proxy (Half n)
 half _ = Proxy
 
--- | transform the GHC's typelit into SNat
+-- | Positive natural number in type level
 -- We rely on the SNat to define Take and Drop
 data SNat = One | Succ SNat
+-- | transform the GHC's typelit into SNat
 type family ToSNat (a :: Nat) :: SNat where
     ToSNat 1 = One
     ToSNat n = Succ (ToSNat (n - 1))
+-- | transform the GHC's typelit into SNat
 tosnat :: KnownNat n => Proxy n -> Proxy (ToSNat n)
 tosnat _ = Proxy
 

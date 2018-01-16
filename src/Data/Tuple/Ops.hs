@@ -1,3 +1,16 @@
+------------------------------------------------------------
+-- |
+-- Module      :  Data.Tuple.Ops
+-- Description :  various operations on n-ary tuples via GHC.Generics
+-- Copyright   :  (c) 2018 Jiasen Wu
+-- License     :  BSD-style (see the file LICENSE)
+-- Maintainer  :  Jiasen Wu <jiasenwu@hotmail.com>
+-- Stability   :  experimental
+-- Portability :  portable
+--
+--
+-- This module exports various operations on n-ary tuples
+------------------------------------------------------------
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE StandaloneDeriving #-}
 module Data.Tuple.Ops(
@@ -5,7 +18,7 @@ module Data.Tuple.Ops(
 ) where
 
 import GHC.Generics
-import Data.Tuple.Ops.Uncons
+import Data.Tuple.Ops.Uncons 
 
 deriving instance Generic Int
 deriving instance Generic Word

@@ -1,3 +1,16 @@
+------------------------------------------------------------
+-- |
+-- Module      :  Data.Tuple.Ops.Uncons
+-- Description :  various operations on n-ary tuples via GHC.Generics
+-- Copyright   :  (c) 2018 Jiasen Wu
+-- License     :  BSD-style (see the file LICENSE)
+-- Maintainer  :  Jiasen Wu <jiasenwu@hotmail.com>
+-- Stability   :  experimental
+-- Portability :  portable
+--
+--
+-- This module define 'uncons'
+------------------------------------------------------------
 {-# LANGUAGE TypeSynonymInstances #-}
 
 -- | Examples are given below:
@@ -10,7 +23,7 @@
 --
 -- >>> uncons (True,'a', "S")
 -- (True,('a',"S"))
---
+-- 
 
 module Data.Tuple.Ops.Uncons (uncons) where
 
