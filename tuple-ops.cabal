@@ -24,3 +24,4 @@ Library
                           , UndecidableInstances
                           , FlexibleInstances
     build-depends:          base >= 4.7 && < 5.0
+                          , type-combinators == 0.2.4.3

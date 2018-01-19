@@ -20,130 +20,88 @@ module Data.Tuple.Ops.Internal where
 
 import qualified GHC.Generics as G
 import GHC.Generics (Generic(..), (:*:)(..), (:+:)(..), Rec0, C1, D1, S1, M1(..), U1, K1(..))
-import GHC.TypeLits
 import Data.Proxy
+import Data.Type.Product
+import Type.Family.List
+import qualified Type.Family.Nat as Nat
 import qualified Prelude as P 
 import Prelude (Maybe(..), Int, Word, Char, Float, Double, Bool(..), ($))
 
--- | a sentinial datatype that represents a empty product
-data End a = End
-
 -- | Representation of tuple are shaped in a balanced tree. 
--- 'L' transforms the tree into a line, for further manipulation.
-class Linearize (t :: * -> *) (b :: * -> *) where
-  type L t b :: * -> *
-  linearize :: t x -> b x -> L t b x
+-- 'L' transforms the tree into a list, for further manipulation.
+class Linearize (t :: * -> *) where
+  type L t :: [* -> *]
+  linearize :: t x -> Tuple (L t <&> x)
 
--- | base case 1. cons field with end
-instance Linearize (S1 MetaS (Rec0 t)) End where
-    type L (S1 MetaS (Rec0 t)) End = (S1 MetaS (Rec0 t))
-    linearize a End = a
-
--- note that it is not possible to combine base case 2 and 3, which results in
--- a ambiguous instantiation with base case 1
---
--- | base case 2. cons field1 with field2 
-instance Linearize (S1 MetaS (Rec0 t)) (S1 MetaS (Rec0 b)) where
-    type L (S1 MetaS (Rec0 t)) (S1 MetaS (Rec0 b)) = S1 MetaS (Rec0 t) :*: S1 MetaS (Rec0 b)
-    linearize a b = a :*: b
-
--- | base case 3. cons field1 with a product
-instance Linearize (S1 MetaS (Rec0 t)) (b :*: c) where
-    type L (S1 MetaS (Rec0 t)) (b :*: c) = S1 MetaS (Rec0 t) :*: b :*: c
-    linearize a b = a :*: b
+-- | base case. sinleton
+instance Linearize (S1 MetaS (Rec0 t)) where
+    type L (S1 MetaS (Rec0 t)) = [S1 MetaS (Rec0 t)]
+    linearize = only
 
 -- | inductive case. preppend a product with what ever
-instance (Linearize v b, Linearize u (L v b)) => Linearize (u :*: v) b where
-    type L (u :*: v) b = L u (L v b)
-    linearize (a :*: b) c = linearize a (linearize b c)
-
--- | calculate the number of fields of a product
--- note: undefined on non-product rep
-type family Length a :: Nat where
-    Length (S1 MetaS (Rec0 t)) = 1
-    Length (a :*: b) = Length a + Length b
--- | calculate the number of fields of a product
-length :: a x -> Proxy (Length a)
-length _ = Proxy
+instance (Linearize v, Linearize u) => Linearize (u :*: v) where
+    type L (u :*: v) = L u ++ L v
+    linearize (a :*: b) = append' (linearize a) (linearize b)
 
 -- | calculate the half
-type family Half (a :: Nat) :: Nat where
-    Half 1 = 0
-    Half 2 = 1
-    Half n = Half (n - 2) + 1
+type family Half (a :: Nat.N) :: Nat.N where
+    Half (Nat.S Nat.Z) = Nat.Z
+    Half (Nat.S (Nat.S Nat.Z)) = Nat.S Nat.Z
+    Half (Nat.S (Nat.S n)) = Nat.S (Half n)
 -- | calculate the half
-half :: KnownNat n => Proxy n -> Proxy (Half n)
+half :: Proxy n -> Proxy (Half n)
 half _ = Proxy
 
--- | Positive natural number in type level
--- We rely on the SNat to define Take and Drop
-data SNat = One | Succ SNat
--- | transform the GHC's typelit into SNat
-type family ToSNat (a :: Nat) :: SNat where
-    ToSNat 1 = One
-    ToSNat n = Succ (ToSNat (n - 1))
--- | transform the GHC's typelit into SNat
-tosnat :: KnownNat n => Proxy n -> Proxy (ToSNat n)
-tosnat _ = Proxy
-
 -- | take the first n elements from a product
-class Take (n :: SNat) (a :: * -> *) where
-    type T n a :: * -> *
-    take :: Proxy n -> a x -> T n a x
+class Take (n :: Nat.N) (a :: [* -> *]) where
+    type T n a :: [* -> *]
+    take :: Proxy n -> Tuple (a <&> x) -> Tuple (T n a <&> x)
 
--- | base case 1. take one out of singleton
-instance Take One (S1 MetaS (Rec0 t)) where
-    type T One (S1 MetaS (Rec0 t)) = S1 MetaS (Rec0 t)
+-- | base case. take one out of singleton
+instance Take Nat.Z xs where
+    type T Nat.Z xs = xs
     take _ a = a
 
--- | base case 2. take one out of a product
-instance Take One (a :*: b) where
-    type T One (a :*: b) = a
-    take _ (a :*: _) = a
-
 -- | inductive case. take (n+1) elements
-instance Take n b => Take (Succ n) (a :*: b) where
-    type T (Succ n) (a :*: b) = a :*: T n b
-    take (_ :: Proxy (Succ n)) (a :*: b) = a :*: take (Proxy :: Proxy n) b
+instance Take n xs => Take (Nat.S n) (x : xs) where
+    type T (Nat.S n) (x : xs) = x : T n xs
+    take (_ :: Proxy (Nat.S n)) (a : as) = a : take (Proxy :: Proxy n) b
 
 -- | drop the first n elements from a product
-class Drop (n :: SNat) (a :: * -> *) where
-    type D n a :: * -> *
-    drop :: Proxy n -> a x -> D n a x
+class Drop (n :: Nat.N) (a :: [* -> *]) where
+    type D n a :: [* -> *]
+    drop :: Proxy n -> Tuple (a <&> x) -> Tuple (D n a <&> x)
 
--- | base case 1. drop one from product
-instance Drop One (a :*: b) where
-    type D One (a :*: b) = b
-    drop _ (_ :*: b) = b
+-- | base case. drop one from product
+instance Drop Nat.Z as where
+    type D Nat.Z as = as
+    drop _ a = a
 
 -- | inductive case. drop (n+1) elements
-instance Drop n b => Drop (Succ n) (a :*: b) where
-    type D (Succ n) (a :*: b) = D n b
-    drop (_ :: Proxy (Succ n)) (a :*: b) = drop (Proxy :: Proxy n) b
+instance Drop n b => Drop (Nat.S n) (a : as) where
+    type D (Nat.S n) (a : as) = D n as
+    drop (_ :: Proxy (Nat.S n)) (a : as) = drop (Proxy :: Proxy n) as
 
 -- | 'Normalize' converts a linear product back into a balanced tree.
-class Normalize (a :: * -> *) where
-    type N a :: * -> * 
-    normalize :: a x -> N a x
+class Normalize (a :: [* -> *]) where
+    type N a :: * -> *
+    normalize :: Tuple [a <&> x] -> N a x
 
--- | base case 1. singleton
-instance Normalize (S1 MetaS (Rec0 t)) where
-    type N (S1 MetaS (Rec0 t)) = S1 MetaS (Rec0 t)
-    normalize a = a
+-- | base case. singleton
+instance Normalize [S1 MetaS (Rec0 t)] where
+    type N [S1 MetaS (Rec0 t)] = S1 MetaS (Rec0 t)
+    normalize a = head' a
 
 -- | inductive case. product
-instance (KnownNat (Length a + Length b),
-          KnownNat (Half (Length a + Length b)),
-          Take (ToSNat (Half (Length a + Length b))) (a :*: b),
-          Drop (ToSNat (Half (Length a + Length b))) (a :*: b),
-          Normalize ((T (ToSNat (Half (Length a + Length b))) (a :*: b))), 
-          Normalize ((D (ToSNat (Half (Length a + Length b))) (a :*: b)))) 
-    => Normalize (a :*: b) where
-    type N (a :*: b) = N (T (ToSNat (Half (Length a + Length b))) (a :*: b)) :*: 
-                       N (D (ToSNat (Half (Length a + Length b))) (a :*: b))
-    normalize v = let n1 = length v :: Proxy (Length a + Length b)
-                      n2 = tosnat $ half n1
-                  in normalize (take n2 v) :*: normalize (drop n2 v)
+instance (Take (Half (Nat.N1 Nat.+ Nat.Len b)) (a :< b),
+          Drop (Half (Nat.N1 Nat.+ Nat.Len b)) (a :< b),
+          Normalize (T (Half (Nat.N1 Nat.+ Nat.Len b)) (a :< b)), 
+          Normalize (D (Half (Nat.N1 Nat.+ Nat.Len b)) (a :< b))) 
+    => Normalize (a :< b) where
+    type N (a :< b) = N (T (Half (Nat.N1 Nat.+ Nat.Len b)) (a :< b)) :*: 
+                      N (D (Half (Nat.N1 Nat.+ Nat.Len b)) (a :< b))
+    normalize v = let n = half (length v :: Proxy (Nat.N1 Nat.+ Nat.Len b))
+                  in normalize (take n v) :*: normalize (drop n v)
 
 type MetaS = 'G.MetaSel 'Nothing 'G.NoSourceUnpackedness 'G.NoSourceStrictness 'G.DecidedLazy
 -- | utility type function to trim the Rec0 
