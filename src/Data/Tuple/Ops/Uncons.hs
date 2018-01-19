@@ -9,11 +9,7 @@
 -- Portability :  portable
 --
 --
--- This module define 'uncons'
-------------------------------------------------------------
-{-# LANGUAGE TypeSynonymInstances #-}
-
--- | Examples are given below:
+-- This module define 'uncons'. Examples are given below:
 --
 -- >>> uncons (1::Int)
 -- (1,())
@@ -23,9 +19,11 @@
 --
 -- >>> uncons (True,'a', "S")
 -- (True,('a',"S"))
--- 
+--
+------------------------------------------------------------
+{-# LANGUAGE TypeSynonymInstances #-}
 
-module Data.Tuple.Ops.Uncons (uncons) where
+module Data.Tuple.Ops.Uncons (uncons, Uncons) where
 
 import qualified GHC.Generics as G
 import GHC.Generics (Generic(..), (:*:)(..), (:+:)(..), Rec0, C1, D1, S1, M1(..), U1, K1(..))
