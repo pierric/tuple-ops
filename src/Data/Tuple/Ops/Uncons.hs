@@ -24,6 +24,7 @@
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Data.Tuple.Ops.Uncons (uncons, Uncons, Unconsable) where
 
@@ -131,9 +132,9 @@ type family Uncons a where
 -- | A constraint on any 'uncons'able data type, where
 -- @a@ is the input type, and @(b,c)@ is the output type
 type Unconsable a b c = (Generic a, Generic b, Generic c, Uncons a ~ (b, c),
-                         Rep a ~ D1 MetaS (UnD1 (Rep a)), 
-                         Rep b ~ D1 MetaS (UnD1 (Rep b)), 
-                         Rep c ~ D1 MetaS (UnD1 (Rep c)),
+                         Rep a ~ D1 (MetaOfD1 (Rep a)) (UnD1 (Rep a)), 
+                         Rep b ~ D1 (MetaOfD1 (Rep b)) (UnD1 (Rep b)), 
+                         Rep c ~ D1 (MetaOfD1 (Rep c)) (UnD1 (Rep c)),
                          UnconsR (UnD1 (Rep a)), 
                          HeadR (UnD1 (Rep a)) ~ (UnD1 (Rep b)), 
                          TailR (UnD1 (Rep a)) ~ (UnD1 (Rep c)))

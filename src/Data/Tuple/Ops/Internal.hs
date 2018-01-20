@@ -14,6 +14,9 @@
 ------------------------------------------------------------
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE UndecidableInstances #-}
+
 module Data.Tuple.Ops.Internal where
 
 import GHC.Generics ((:*:)(..), Rec0, D1, S1, Meta(..), SourceUnpackedness(..), SourceStrictness(..), DecidedStrictness(..))
@@ -138,3 +141,6 @@ type family UnS1 t where
 -- | utility type function to trim the D1
 type family UnD1 t where
     UnD1 (D1 _ t) = t
+-- | utility type function to extract the meta information
+type family MetaOfD1 t where
+    MetaOfD1 (D1 m _) = m
