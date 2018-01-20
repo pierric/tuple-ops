@@ -25,7 +25,7 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 
-module Data.Tuple.Ops.Uncons (uncons, Uncons) where
+module Data.Tuple.Ops.Uncons (uncons, Uncons, Unconsable) where
 
 import GHC.Generics (Generic(..), (:*:)(..), (:+:)(..), URec, Rec0, C1, D1, S1, M1(..), U1, K1(..), Meta(..), FixityI(..))
 import GHC.TypeLits (Symbol)
@@ -128,11 +128,17 @@ type family Uncons a where
     Uncons (a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p) = (a, (b,c,d,e,f,g,h,i,j,k,l,m,n,o,p))
     Uncons a = (a, ())
 
--- | 'uncons' takes primitive, pair, tuple
+-- | A constraint on any 'uncons'able data type, where
+-- @a@ is the input type, and @(b,c)@ is the output type
+type Unconsable a b c = (Generic a, Generic b, Generic c, Uncons a ~ (b, c),
+                         Rep a ~ D1 MetaS (UnD1 (Rep a)), 
+                         Rep b ~ D1 MetaS (UnD1 (Rep b)), 
+                         Rep c ~ D1 MetaS (UnD1 (Rep c)),
+                         UnconsR (UnD1 (Rep a)), 
+                         HeadR (UnD1 (Rep a)) ~ (UnD1 (Rep b)), 
+                         TailR (UnD1 (Rep a)) ~ (UnD1 (Rep c)))
+
+-- | 'uncons' takes primitive, pair, tuple,
 -- and produces a pair of its first data and the rest elements.
-uncons :: (Generic a, Rep a ~ D1 ma ra, Uncons a ~ (b, c),
-           Generic b, Rep b ~ D1 mb rb,
-           Generic c, Rep c ~ D1 mc rc,
-           UnconsR ra, HeadR ra ~ rb, TailR ra ~ rc)
-       => a -> Uncons a 
+uncons :: Unconsable a b c => a -> (b, c)
 uncons x = let (a, b) = unconsR $ unM1 $ from x in (to $ M1 a, to $ M1 b)
