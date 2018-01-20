@@ -67,9 +67,9 @@ length' _ = Proxy
 
 -- | calculate the half
 type family Half (a :: Nat.N) :: Nat.N where
-    Half (Nat.S Nat.Z) = Nat.Z
-    Half (Nat.S (Nat.S Nat.Z)) = Nat.S Nat.Z
-    Half (Nat.S (Nat.S n)) = Nat.S (Half n)
+    Half ('Nat.S 'Nat.Z) = 'Nat.Z
+    Half ('Nat.S ('Nat.S 'Nat.Z)) = 'Nat.S 'Nat.Z
+    Half ('Nat.S ('Nat.S n)) = 'Nat.S (Half n)
 -- | calculate the half
 half :: Proxy n -> Proxy (Half n)
 half _ = Proxy
