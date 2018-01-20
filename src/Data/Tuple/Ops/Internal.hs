@@ -13,43 +13,36 @@
 -- representation of tuple.
 ------------------------------------------------------------
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE PolyKinds #-}
 module Data.Tuple.Ops.Internal where
 
-import qualified GHC.Generics as G
-import GHC.Generics (Generic(..), (:*:)(..), (:+:)(..), Rec0, C1, D1, S1, M1(..), U1, K1(..))
+import GHC.Generics ((:*:)(..), Rec0, D1, S1, Meta(..), SourceUnpackedness(..), SourceStrictness(..), DecidedStrictness(..))
 import Data.Proxy
 import Data.Type.Combinator
 import Data.Type.Product
 import Type.Family.List
 import Type.Class.Witness
 import qualified Type.Family.Nat as Nat
-import qualified Prelude as P 
-import Prelude (Maybe(..), Int, Word, Char, Float, Double, Bool(..), ($), (.))
 
+-- 'TupleR' is an injective type that @TupleR f x == TupleR g y ---> f == g && x == y@
 newtype TupleR (f :: [* -> *]) x = TupleR { unTupleR :: Tuple (f <&> x)}
 
--- class X' (t :: * -> *) where
---     type X t :: [* -> *]
---     foo :: t x -> TupleR (X t) x
-  
--- instance X' v => X' (u :*: v) where
---     type X (u :*: v) = u : X v
---     foo (a :*: b) = TupleR $ I a :< (unTupleR $ foo b)
+-- | prove that @(a ++ b) <&> x == a <&> x ++ b <&> x@
+class AppDistributive (a :: [* -> *]) where
+    appDistrWit :: (Proxy a, Proxy b, Proxy x) -> Wit (((a ++ b) <&> x) ~ ((a <&> x) ++ (b <&> x)))
+-- | inductive proof on @a@
+-- case 1. @a@ is @[]@
+instance AppDistributive '[] where
+    appDistrWit _ = Wit
+-- | case 2. @a@ is @_ :< _@
+instance AppDistributive as => AppDistributive (a :< as) where
+    appDistrWit (_ :: Proxy (a :< as), pb, px) = 
+        case appDistrWit (Proxy :: Proxy as, pb, px) of 
+            Wit -> Wit
 
-aaa :: Wit (((a :< b) ++ c) ~ (a :< (b ++ c)))
-aaa = Wit
-bbb :: Wit (((a :< b) <&> x) ~ ((a x) :< (b <&> x)))
-bbb = Wit
-class MyWit (a :: [* -> *]) where
-    ccc :: Wit (((a ++ b) <&> x) ~ ((a <&> x) ++ (b <&> x)))
-instance MyWit '[] where
-    ccc = Wit
-instance MyWit (a :< as) where
-    ccc = Wit
+-- | utility function to call 'appDistrWit'
+appDistrWitPassArg :: (f :*: g) x -> (Proxy (L f), Proxy (L g), Proxy x)
+appDistrWitPassArg _ = (Proxy, Proxy, Proxy)
 
 -- | Representation of tuple are shaped in a balanced tree. 
 -- 'L' transforms the tree into a list, for further manipulation.
@@ -63,9 +56,11 @@ instance Linearize (S1 MetaS (Rec0 t)) where
     linearize = TupleR . only . I
 
 -- | inductive case. preppend a product with what ever
-instance (Linearize v, Linearize u) => Linearize (u :*: v) where
+instance (Linearize v, Linearize u, AppDistributive (L u)) => Linearize (u :*: v) where
     type L (u :*: v) = L u ++ L v
-    linearize (a :*: b) = TupleR $ append' (unTupleR $ linearize a) (unTupleR $ linearize b)
+    linearize (a :*: b) = 
+        case appDistrWit (appDistrWitPassArg (a :*: b)) of
+            Wit -> TupleR $ append' (unTupleR $ linearize a) (unTupleR $ linearize b)
 
 length' :: TupleR a x -> Proxy (Nat.Len a)
 length' _ = Proxy
@@ -82,32 +77,35 @@ half _ = Proxy
 -- | take the first n elements from a product
 class Take (n :: Nat.N) (a :: [* -> *]) where
     type T n a :: [* -> *]
-    take :: Proxy n -> TupleR a x -> TupleR (T n a) x
+    take' :: Proxy n -> TupleR a x -> TupleR (T n a) x
 
 -- | base case. take one out of singleton
-instance Take Nat.Z xs where
-    type T Nat.Z xs = xs
-    take _ a = a
+instance Take 'Nat.Z xs where
+    type T 'Nat.Z xs = '[]
+    take' _ _ = TupleR Ø
 
 -- | inductive case. take (n+1) elements
-instance Take n xs => Take (Nat.S n) (x : xs) where
-    type T (Nat.S n) (x : xs) = x : T n xs
-    take (_ :: Proxy (Nat.S n)) (TupleR (a :< as)) = TupleR (a :< unTupleR (take (Proxy :: Proxy n) (TupleR as)))
+instance Take n as => Take ('Nat.S n) (a : as) where
+    type T ('Nat.S n) (a : as) = a : T n as
+    take' (_ :: Proxy ('Nat.S n)) (TupleR (a :< as) :: TupleR (a : as) x) = 
+        let as' = unTupleR $ take' (Proxy :: Proxy n) (TupleR as :: TupleR as x)
+        in TupleR (a :< as')
 
 -- | drop the first n elements from a product
 class Drop (n :: Nat.N) (a :: [* -> *]) where
     type D n a :: [* -> *]
-    drop :: Proxy n -> TupleR a x -> TupleR (D n a) x
+    drop' :: Proxy n -> TupleR a x -> TupleR (D n a) x
 
 -- | base case. drop one from product
-instance Drop Nat.Z as where
-    type D Nat.Z as = as
-    drop _ a = a
+instance Drop 'Nat.Z as where
+    type D 'Nat.Z as = as
+    drop' _ a = a
 
 -- | inductive case. drop (n+1) elements
-instance Drop n as => Drop (Nat.S n) (a : as) where
-    type D (Nat.S n) (a : as) = D n as
-    drop (_ :: Proxy (Nat.S n)) (TupleR (a :< as)) = drop (Proxy :: Proxy n) (TupleR as)
+instance Drop n as => Drop ('Nat.S n) (a : as) where
+    type D ('Nat.S n) (a : as) = D n as
+    drop' (_ :: Proxy ('Nat.S n)) (TupleR (a :< as) :: TupleR (a : as) x) = 
+        drop' (Proxy :: Proxy n) (TupleR as :: TupleR as x)
 
 -- | 'Normalize' converts a linear product back into a balanced tree.
 class Normalize (a :: [* -> *]) where
@@ -128,9 +126,9 @@ instance (Take (Half (Nat.N2 Nat.+ Nat.Len c)) (a :< b :< c),
     type N (a :< b :< c) = N (T (Half (Nat.N2 Nat.+ Nat.Len c)) (a :< b :< c)) :*: 
                            N (D (Half (Nat.N2 Nat.+ Nat.Len c)) (a :< b :< c))
     normalize v = let n = half (length' v)
-                  in normalize (take n v) :*: normalize (drop n v)
+                  in normalize (take' n v) :*: normalize (drop' n v)
 
-type MetaS = 'G.MetaSel 'Nothing 'G.NoSourceUnpackedness 'G.NoSourceStrictness 'G.DecidedLazy
+type MetaS = 'MetaSel 'Nothing 'NoSourceUnpackedness 'NoSourceStrictness 'DecidedLazy
 -- | utility type function to trim the Rec0 
 type family UnRec0 t where
     UnRec0 (Rec0 t) = t
