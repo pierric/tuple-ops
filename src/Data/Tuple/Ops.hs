@@ -14,11 +14,13 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE StandaloneDeriving #-}
 module Data.Tuple.Ops(
-    module Data.Tuple.Ops.Uncons
+    module Data.Tuple.Ops.Uncons,
+    module Data.Tuple.Ops.Cons 
 ) where
 
 import GHC.Generics
 import Data.Tuple.Ops.Uncons 
+import Data.Tuple.Ops.Cons 
 
 deriving instance Generic Int
 deriving instance Generic Word

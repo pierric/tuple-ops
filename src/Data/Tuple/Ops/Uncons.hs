@@ -34,20 +34,17 @@ import Data.Proxy
 import Type.Family.Nat (N1)
 import Data.Tuple.Ops.Internal
 
--- | representation of a tuple of arity > 2, in which @/u/@ is of the form @_ :*: _@
-type RepOfTuple c u = C1 ('MetaCons c 'PrefixI 'False) u 
-
 -- | 'HeadR' is a type function that takes the first element of a tuple
 type family HeadR (f :: * -> *) :: * -> * where
     HeadR (C1 mc (S1 ms (URec a))) = C1 mc (S1 ms (URec a))
     HeadR (a :+: b) = a :+: b
-    HeadR (RepOfTuple "(,)" (a :*: b)) = UnD1 (Rep a)
+    HeadR (RepOfTuple "(,)" (S1 MetaS (Rec0 a) :*: S1 MetaS (Rec0 b))) = UnD1 (Rep a)
     HeadR (RepOfTuple tcon  (a :*: b :*: c)) = UnD1 (Rep (UnRec0 (UnS1 (N (T N1 (L (a :*: b :*: c)))))))
 -- | 'TailR' is a type function that drops the first element of a tuple
 type family TailR (f :: * -> *) :: * -> * where
     TailR (C1 mc (S1 ms (URec a))) = C1 ('MetaCons "()" 'PrefixI 'False) U1
     TailR (a :+: b) = C1 ('MetaCons "()" 'PrefixI 'False) U1
-    TailR (RepOfTuple "(,)" (a :*: b)) = UnD1 (Rep t2)
+    TailR (RepOfTuple "(,)" (S1 MetaS (Rec0 a) :*: S1 MetaS (Rec0 b))) = UnD1 (Rep b)
     TailR (RepOfTuple tcon  (a :*: b :*: c)) = RepOfTuple (TupleConPred tcon) (N (D N1 (L (a :*: b :*: c))))
 
 -- | Abstract type class for generic representation of a /uncons/able datatype
@@ -71,7 +68,7 @@ instance UnconsableR (a :+: b) where
 -- 'TailR' is the second element
 instance (Generic t1, Rep t1 ~ D1 mt1 ct1,
           Generic t2, Rep t2 ~ D1 mt2 ct2)
-    => UnconsableR (RepOfTuple "(,)" (t1 :*: t2)) where
+    => UnconsableR (RepOfTuple "(,)" (S1 MetaS (Rec0 t1) :*: S1 MetaS (Rec0 t2))) where
     unconsR (M1 (a :*: b)) = (unM1 $ from $ unK1 $ unM1 a, unM1 $ from $ unK1 $ unM1 b)
 
 -- | tuple of arity > 2

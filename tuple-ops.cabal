@@ -15,6 +15,7 @@ Library
     hs-source-dirs:         src
     exposed-modules:        Data.Tuple.Ops
                           , Data.Tuple.Ops.Uncons
+                          , Data.Tuple.Ops.Cons
                           , Data.Tuple.Ops.Internal
     default-language:       Haskell2010
     default-extensions:     DataKinds

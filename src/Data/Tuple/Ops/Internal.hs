@@ -19,7 +19,7 @@
 
 module Data.Tuple.Ops.Internal where
 
-import GHC.Generics ((:*:)(..), Rec0, D1, S1, Meta(..), SourceUnpackedness(..), SourceStrictness(..), DecidedStrictness(..))
+import GHC.Generics ((:*:)(..), Rec0, C1, D1, S1, Meta(..), SourceUnpackedness(..), SourceStrictness(..), DecidedStrictness(..), FixityI(..))
 import Data.Proxy
 import Data.Type.Combinator
 import Data.Type.Product
@@ -144,3 +144,6 @@ type family UnD1 t where
 -- | utility type function to extract the meta information
 type family MetaOfD1 t where
     MetaOfD1 (D1 m _) = m
+
+-- | representation of a tuple of arity > 2, in which @/u/@ is of the form @_ :*: _@
+type RepOfTuple c u = C1 ('MetaCons c 'PrefixI 'False) u 
