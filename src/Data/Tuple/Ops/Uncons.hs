@@ -34,8 +34,6 @@ import Data.Proxy
 import Type.Family.Nat (N1)
 import Data.Tuple.Ops.Internal
 
--- | representation of a pair
-type RepOfPair t1 t2 = C1 ('MetaCons "(,)" 'PrefixI 'False) (S1 MetaS (Rec0 t1) :*: S1 MetaS (Rec0 t2))
 -- | representation of a tuple of arity > 2, in which @/u/@ is of the form @_ :*: _@
 type RepOfTuple c u = C1 ('MetaCons c 'PrefixI 'False) u 
 
@@ -43,29 +41,29 @@ type RepOfTuple c u = C1 ('MetaCons c 'PrefixI 'False) u
 type family HeadR (f :: * -> *) :: * -> * where
     HeadR (C1 mc (S1 ms (URec a))) = C1 mc (S1 ms (URec a))
     HeadR (a :+: b) = a :+: b
-    HeadR (RepOfPair t1 t2) = UnD1 (Rep t1)
-    HeadR (RepOfTuple tcon (a :*: b :*: c)) = UnD1 (Rep (UnRec0 (UnS1 (N (T N1 (L (a :*: b :*: c)))))))
+    HeadR (RepOfTuple "(,)" (a :*: b)) = UnD1 (Rep a)
+    HeadR (RepOfTuple tcon  (a :*: b :*: c)) = UnD1 (Rep (UnRec0 (UnS1 (N (T N1 (L (a :*: b :*: c)))))))
 -- | 'TailR' is a type function that drops the first element of a tuple
 type family TailR (f :: * -> *) :: * -> * where
     TailR (C1 mc (S1 ms (URec a))) = C1 ('MetaCons "()" 'PrefixI 'False) U1
     TailR (a :+: b) = C1 ('MetaCons "()" 'PrefixI 'False) U1
-    TailR (RepOfPair t1 t2) = UnD1 (Rep t2)
-    TailR (RepOfTuple tcon (a :*: b :*: c)) = RepOfTuple (TupleConPred tcon) (N (D N1 (L (a :*: b :*: c))))
+    TailR (RepOfTuple "(,)" (a :*: b)) = UnD1 (Rep t2)
+    TailR (RepOfTuple tcon  (a :*: b :*: c)) = RepOfTuple (TupleConPred tcon) (N (D N1 (L (a :*: b :*: c))))
 
 -- | Abstract type class for generic representation of a /uncons/able datatype
-class UnconsR f where
+class UnconsableR f where
     unconsR :: f a -> (HeadR f a, TailR f a)
 
 -- | primitive datatype
 -- 'HeadR' is the datatype itself
 -- 'TailR' is ()
-instance UnconsR (C1 mc (S1 ms (URec a))) where
+instance UnconsableR (C1 mc (S1 ms (URec a))) where
     unconsR a = (a, unM1 (from ()))
 
 -- | sum datatype
 -- 'HeadR' is the datatype itself
 -- 'TailR' is ()
-instance UnconsR (a :+: b) where
+instance UnconsableR (a :+: b) where
     unconsR a = (a, unM1 (from ()))
 
 -- | pair
@@ -73,7 +71,7 @@ instance UnconsR (a :+: b) where
 -- 'TailR' is the second element
 instance (Generic t1, Rep t1 ~ D1 mt1 ct1,
           Generic t2, Rep t2 ~ D1 mt2 ct2)
-    => UnconsR (RepOfPair t1 t2) where
+    => UnconsableR (RepOfTuple "(,)" (t1 :*: t2)) where
     unconsR (M1 (a :*: b)) = (unM1 $ from $ unK1 $ unM1 a, unM1 $ from $ unK1 $ unM1 b)
 
 -- | tuple of arity > 2
@@ -81,15 +79,12 @@ instance (Generic t1, Rep t1 ~ D1 mt1 ct1,
 -- 'TailR' is the rest all elements
 instance (Linearize (a :*: b :*: c), L (a :*: b :*: c) ~ (S1 MetaS (Rec0 t) : w), 
           Generic t, Rep t ~ D1 hm hc, Normalize w) 
-    => UnconsR (RepOfTuple tcon (a :*: b :*: c)) where
+    => UnconsableR (RepOfTuple tcon (a :*: b :*: c)) where
     unconsR a = let tup = linearize (unM1 a)
                     one = Proxy :: Proxy N1
                     h = unM1 $ from $ unK1 $ unM1 $ normalize $ take' one tup
                     t = M1 $ normalize $ drop' one tup
                 in (h, t)
-    -- unconsR a = case linearize (unM1 a) of
-    --               (TupleR (u :< v) :: TupleR (S1 MetaS (Rec0 t) : w) x) -> 
-    --                 (unM1 $ from $ (unK1 (unM1 (getI u)) :: t), M1 $ normalize $ (TupleR v :: TupleR w x))
 
 -- | calculate the tuple constructor of the size 1 smaller
 -- upto the tupel of arity of 16
@@ -135,7 +130,7 @@ type Unconsable a b c = (Generic a, Generic b, Generic c, Uncons a ~ (b, c),
                          Rep a ~ D1 (MetaOfD1 (Rep a)) (UnD1 (Rep a)), 
                          Rep b ~ D1 (MetaOfD1 (Rep b)) (UnD1 (Rep b)), 
                          Rep c ~ D1 (MetaOfD1 (Rep c)) (UnD1 (Rep c)),
-                         UnconsR (UnD1 (Rep a)), 
+                         UnconsableR (UnD1 (Rep a)), 
                          HeadR (UnD1 (Rep a)) ~ (UnD1 (Rep b)), 
                          TailR (UnD1 (Rep a)) ~ (UnD1 (Rep c)))
 
