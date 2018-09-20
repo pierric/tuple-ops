@@ -49,6 +49,7 @@ class ConsableR va rb where
 type family ConsR va rb vb where
     ConsR va (C1 mc U1) vb = UnD1 (Rep va)
     ConsR va (C1 mc (S1 ms (URec b))) vb = RepOfTuple "(,)" (S1 MetaS (Rec0 va) :*: S1 MetaS (Rec0 vb))
+    ConsR va (C1 mc (S1 ms (Rec0 b))) vb = RepOfTuple "(,)" (S1 MetaS (Rec0 va) :*: S1 MetaS (Rec0 vb))
     ConsR va (b0 :+: b1) vb = RepOfTuple "(,)" (S1 MetaS (Rec0 va) :*: S1 MetaS (Rec0 vb))
     ConsR va (RepOfTuple tcon (b0 :*: b1)) vb = RepOfTuple (TupleConSucc tcon) (N (L (S1 MetaS (Rec0 va) :*: b0 :*: b1)))
 
