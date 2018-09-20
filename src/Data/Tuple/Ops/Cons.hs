@@ -59,6 +59,9 @@ instance (Generic a, Rep a ~ D1 (MetaOfD1 (Rep a)) (UnD1 (Rep a))) => ConsableR 
 instance ConsableR va (C1 mc (S1 ms (URec b))) where
     consR a b _ = M1 (M1 (K1 a) :*: M1 (K1 b))
 
+instance ConsableR va (C1 mc (S1 ms (Rec0 b))) where
+    consR a b _ = M1 (M1 (K1 a) :*: M1 (K1 b))
+
 instance ConsableR va (b0 :+: b1) where
     consR a b _ = M1 (M1 (K1 a) :*: M1 (K1 b))
 

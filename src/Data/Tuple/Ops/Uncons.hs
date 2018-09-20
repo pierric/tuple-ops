@@ -59,6 +59,12 @@ class UnconsableR f where
 instance UnconsableR (C1 mc (S1 ms (URec a))) where
     unconsR a = (a, unM1 (from ()))
 
+-- | lifted datatype
+-- 'HeadR' is the datatype itself
+-- 'TailR' is ()
+instance UnconsableR (C1 mc (S1 ms (Rec0 a))) where
+    unconsR a = (a, unM1 (from ()))
+
 -- | sum datatype
 -- 'HeadR' is the datatype itself
 -- 'TailR' is ()
