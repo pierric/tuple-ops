@@ -24,23 +24,26 @@
 -- ("S",True,'a')
 --
 ------------------------------------------------------------
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE ConstraintKinds       #-}
+{-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE ScopedTypeVariables   #-}
+{-# LANGUAGE UndecidableInstances  #-}
 
 module Data.Tuple.Ops.Cons (cons, Cons, Consable) where
 
-import GHC.Generics (Generic(..), (:*:)(..), (:+:)(..), URec, Rec0, C1, D1, S1, M1(..), U1, K1(..))
-import GHC.TypeLits (Symbol)
-import Type.Family.List
-import Data.Tuple.Ops.Internal
+import           Data.Tuple.Ops.Internal
+import           GHC.Generics            ((:*:) (..), (:+:) (..), C1, D1,
+                                          Generic (..), K1 (..), M1 (..), Rec0,
+                                          S1, U1, URec)
+import           GHC.TypeLits            (Symbol)
+import           RIO                     hiding (to)
+import           Type.Family.List
 
 -- | Abstract type class for generic representation of a /cons/able datatype
 class ConsableR va rb where
     -- | @consR@ takes a value of type @va@ and a value of type @vb@ together @vb@'s representation,
-    -- returns the cons'ed value. Note that, 'ConsableR' is inductively scrutinize @vb@'s 
+    -- returns the cons'ed value. Note that, 'ConsableR' is inductively scrutinize @vb@'s
     -- representation, however this representation is only a dummy argument, since the result is
     -- constructed from the value directly.
     consR :: (Generic vb, Rep vb ~ D1 (MetaOfD1 (Rep vb)) rb) => va -> vb -> rb x -> ConsR va rb vb x
@@ -65,8 +68,8 @@ instance ConsableR va (C1 mc (S1 ms (Rec0 b))) where
 instance ConsableR va (b0 :+: b1) where
     consR a b _ = M1 (M1 (K1 a) :*: M1 (K1 b))
 
-instance (Linearize b0, Linearize b1, 
-          Normalize ((S1 MetaS (Rec0 va) :< L b0 ++ L b1)), 
+instance (Linearize b0, Linearize b1,
+          Normalize ((S1 MetaS (Rec0 va) :< L b0 ++ L b1)),
           AppDistributive (L b0)) => ConsableR va (RepOfTuple tcon (b0 :*: b1)) where
     consR a b _ = M1 $ normalize $ linearize $ (M1 (K1 a) :: S1 MetaS (Rec0 va) x) :*: unM1 (unM1 (from b))
 
@@ -110,10 +113,10 @@ type family Cons a b where
 
 -- | A constraint on any 'cons'able data type, where
 -- @a@ and @b@ are the input, and @c@ is the output.
-type Consable a b c = (Generic a, Generic b, Generic c, Cons a b ~ c, 
-                       Rep b ~ D1 (MetaOfD1 (Rep b)) (UnD1 (Rep b)), 
+type Consable a b c = (Generic a, Generic b, Generic c, Cons a b ~ c,
+                       Rep b ~ D1 (MetaOfD1 (Rep b)) (UnD1 (Rep b)),
                        Rep c ~ D1 (MetaOfD1 (Rep c)) (UnD1 (Rep c)),
-                       ConsableR a (UnD1 (Rep b)), 
+                       ConsableR a (UnD1 (Rep b)),
                        ConsR a (UnD1 (Rep b)) b ~ (UnD1 (Rep c)))
 
 -- | 'cons' takes two datatype, and produces a tuple of them.

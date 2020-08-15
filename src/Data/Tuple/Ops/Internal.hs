@@ -9,23 +9,28 @@
 -- Portability :  portable
 --
 --
--- This module defins operations to manipulate the generic 
+-- This module defins operations to manipulate the generic
 -- representation of tuple.
 ------------------------------------------------------------
+{-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE ScopedTypeVariables   #-}
+{-# LANGUAGE UndecidableInstances  #-}
 
 module Data.Tuple.Ops.Internal where
 
-import GHC.Generics ((:*:)(..), Rec0, C1, D1, S1, Meta(..), SourceUnpackedness(..), SourceStrictness(..), DecidedStrictness(..), FixityI(..))
-import Data.Proxy
-import Data.Type.Combinator
-import Data.Type.Product
-import Type.Family.List
-import Type.Class.Witness
-import qualified Type.Family.Nat as Nat
+import           Data.Proxy
+import           Data.Type.Combinator
+import           Data.Type.Product
+import           GHC.Generics         ((:*:) (..), C1, D1,
+                                       DecidedStrictness (..), FixityI (..),
+                                       Meta (..), Rec0, S1,
+                                       SourceStrictness (..),
+                                       SourceUnpackedness (..))
+import           RIO
+import           Type.Class.Witness
+import           Type.Family.List
+import qualified Type.Family.Nat      as Nat
 
 -- 'TupleR' is an injective type that @TupleR f x == TupleR g y ---> f == g && x == y@
 newtype TupleR (f :: [* -> *]) x = TupleR { unTupleR :: Tuple (f <&> x)}
@@ -39,15 +44,15 @@ instance AppDistributive '[] where
     appDistrWit _ = Wit
 -- | case 2. @a@ is @_ :< _@
 instance AppDistributive as => AppDistributive (a :< as) where
-    appDistrWit (_ :: Proxy (a :< as), pb, px) = 
-        case appDistrWit (Proxy :: Proxy as, pb, px) of 
+    appDistrWit (_ :: Proxy (a :< as), pb, px) =
+        case appDistrWit (Proxy :: Proxy as, pb, px) of
             Wit -> Wit
 
 -- | utility function to call 'appDistrWit'
 appDistrWitPassArg :: (f :*: g) x -> (Proxy (L f), Proxy (L g), Proxy x)
 appDistrWitPassArg _ = (Proxy, Proxy, Proxy)
 
--- | Representation of tuple are shaped in a balanced tree. 
+-- | Representation of tuple are shaped in a balanced tree.
 -- 'L' transforms the tree into a list, for further manipulation.
 class Linearize (t :: * -> *) where
   type L t :: [* -> *]
@@ -61,7 +66,7 @@ instance Linearize (S1 MetaS (Rec0 t)) where
 -- | inductive case. preppend a product with what ever
 instance (Linearize v, Linearize u, AppDistributive (L u)) => Linearize (u :*: v) where
     type L (u :*: v) = L u ++ L v
-    linearize (a :*: b) = 
+    linearize (a :*: b) =
         case appDistrWit (appDistrWitPassArg (a :*: b)) of
             Wit -> TupleR $ append' (unTupleR $ linearize a) (unTupleR $ linearize b)
 
@@ -90,7 +95,7 @@ instance Take 'Nat.Z xs where
 -- | inductive case. take (n+1) elements
 instance Take n as => Take ('Nat.S n) (a : as) where
     type T ('Nat.S n) (a : as) = a : T n as
-    take' (_ :: Proxy ('Nat.S n)) (TupleR (a :< as) :: TupleR (a : as) x) = 
+    take' (_ :: Proxy ('Nat.S n)) (TupleR (a :< as) :: TupleR (a : as) x) =
         let as' = unTupleR $ take' (Proxy :: Proxy n) (TupleR as :: TupleR as x)
         in TupleR (a :< as')
 
@@ -107,7 +112,7 @@ instance Drop 'Nat.Z as where
 -- | inductive case. drop (n+1) elements
 instance Drop n as => Drop ('Nat.S n) (a : as) where
     type D ('Nat.S n) (a : as) = D n as
-    drop' (_ :: Proxy ('Nat.S n)) (TupleR (a :< as) :: TupleR (a : as) x) = 
+    drop' (_ :: Proxy ('Nat.S n)) (TupleR (a :< as) :: TupleR (a : as) x) =
         drop' (Proxy :: Proxy n) (TupleR as :: TupleR as x)
 
 -- | 'Normalize' converts a linear product back into a balanced tree.
@@ -123,16 +128,16 @@ instance Normalize '[S1 MetaS (Rec0 t)] where
 -- | inductive case. product
 instance (Take (Half (Nat.N2 Nat.+ Nat.Len c)) (a :< b :< c),
           Drop (Half (Nat.N2 Nat.+ Nat.Len c)) (a :< b :< c),
-          Normalize (T (Half (Nat.N2 Nat.+ Nat.Len c)) (a :< b :< c)), 
-          Normalize (D (Half (Nat.N2 Nat.+ Nat.Len c)) (a :< b :< c))) 
+          Normalize (T (Half (Nat.N2 Nat.+ Nat.Len c)) (a :< b :< c)),
+          Normalize (D (Half (Nat.N2 Nat.+ Nat.Len c)) (a :< b :< c)))
     => Normalize (a :< b :< c) where
-    type N (a :< b :< c) = N (T (Half (Nat.N2 Nat.+ Nat.Len c)) (a :< b :< c)) :*: 
+    type N (a :< b :< c) = N (T (Half (Nat.N2 Nat.+ Nat.Len c)) (a :< b :< c)) :*:
                            N (D (Half (Nat.N2 Nat.+ Nat.Len c)) (a :< b :< c))
     normalize v = let n = half (length' v)
                   in normalize (take' n v) :*: normalize (drop' n v)
 
 type MetaS = 'MetaSel 'Nothing 'NoSourceUnpackedness 'NoSourceStrictness 'DecidedLazy
--- | utility type function to trim the Rec0 
+-- | utility type function to trim the Rec0
 type family UnRec0 t where
     UnRec0 (Rec0 t) = t
 -- | utility type function to trim the S1
@@ -146,4 +151,4 @@ type family MetaOfD1 t where
     MetaOfD1 (D1 m _) = m
 
 -- | representation of a tuple of arity > 2, in which @/u/@ is of the form @_ :*: _@
-type RepOfTuple c u = C1 ('MetaCons c 'PrefixI 'False) u 
+type RepOfTuple c u = C1 ('MetaCons c 'PrefixI 'False) u

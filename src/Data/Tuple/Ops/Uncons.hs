@@ -21,18 +21,22 @@
 -- (True,('a',"S"))
 --
 ------------------------------------------------------------
+{-# LANGUAGE ConstraintKinds      #-}
+{-# LANGUAGE FlexibleContexts     #-}
 {-# LANGUAGE TypeSynonymInstances #-}
-{-# LANGUAGE ConstraintKinds #-}
-{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Data.Tuple.Ops.Uncons (uncons, Uncons, Unconsable) where
 
-import GHC.Generics (Generic(..), (:*:)(..), (:+:)(..), URec, Rec0, C1, D1, S1, M1(..), U1, K1(..), Meta(..), FixityI(..))
-import GHC.TypeLits (Symbol)
-import Data.Proxy
-import Type.Family.Nat (N1)
-import Data.Tuple.Ops.Internal
+import           Data.Proxy
+import           Data.Tuple.Ops.Internal
+import           GHC.Generics            ((:*:) (..), (:+:) (..), C1, D1,
+                                          FixityI (..), Generic (..), K1 (..),
+                                          M1 (..), Meta (..), Rec0, S1, U1,
+                                          URec)
+import           GHC.TypeLits            (Symbol)
+import           RIO                     hiding (to)
+import           Type.Family.Nat         (N1)
 
 -- | 'HeadR' is a type function that takes the first element of a tuple
 type family HeadR (f :: * -> *) :: * -> * where
@@ -82,8 +86,8 @@ instance (Generic t1, Rep t1 ~ D1 mt1 ct1,
 -- | tuple of arity > 2
 -- 'HeadR' is the first element
 -- 'TailR' is the rest all elements
-instance (Linearize (a :*: b :*: c), L (a :*: b :*: c) ~ (S1 MetaS (Rec0 t) : w), 
-          Generic t, Rep t ~ D1 hm hc, Normalize w) 
+instance (Linearize (a :*: b :*: c), L (a :*: b :*: c) ~ (S1 MetaS (Rec0 t) : w),
+          Generic t, Rep t ~ D1 hm hc, Normalize w)
     => UnconsableR (RepOfTuple tcon (a :*: b :*: c)) where
     unconsR a = let tup = linearize (unM1 a)
                     one = Proxy :: Proxy N1
@@ -132,11 +136,11 @@ type family Uncons a where
 -- | A constraint on any 'uncons'able data type, where
 -- @a@ is the input type, and @(b,c)@ is the output type
 type Unconsable a b c = (Generic a, Generic b, Generic c, Uncons a ~ (b, c),
-                         Rep a ~ D1 (MetaOfD1 (Rep a)) (UnD1 (Rep a)), 
-                         Rep b ~ D1 (MetaOfD1 (Rep b)) (UnD1 (Rep b)), 
+                         Rep a ~ D1 (MetaOfD1 (Rep a)) (UnD1 (Rep a)),
+                         Rep b ~ D1 (MetaOfD1 (Rep b)) (UnD1 (Rep b)),
                          Rep c ~ D1 (MetaOfD1 (Rep c)) (UnD1 (Rep c)),
-                         UnconsableR (UnD1 (Rep a)), 
-                         HeadR (UnD1 (Rep a)) ~ (UnD1 (Rep b)), 
+                         UnconsableR (UnD1 (Rep a)),
+                         HeadR (UnD1 (Rep a)) ~ (UnD1 (Rep b)),
                          TailR (UnD1 (Rep a)) ~ (UnD1 (Rep c)))
 
 -- | 'uncons' takes primitive, pair, tuple,
